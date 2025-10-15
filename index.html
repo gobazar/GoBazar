@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GoBazar - আপনার এলাকার বিশ্বস্ত বাজার</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { font-family: 'Hind Siliguri', sans-serif; background:#f9fafb; scroll-behavior:smooth; }
+    .card-hover { transition: transform .25s, box-shadow .25s; }
+    .card-hover:hover { transform: translateY(-6px); box-shadow: 0 10px 25px rgba(0,0,0,0.08); }
+    .hero { background: linear-gradient(90deg,#00BFA6,#00cfa1); color:#fff; }
+    .shop-cover { border-radius:.75rem; overflow:hidden; height:260px; background:#e6ffe9; position:relative; }
+    .shop-cover img { width:100%; height:100%; object-fit:cover; display:block; }
+    .shop-info { position: relative; z-index: 10; }
+    .shop-profile { width:100px; height:100px; border-radius:9999px; border:4px solid #fff; object-fit:cover; box-shadow:0 6px 18px rgba(0,0,0,0.12); }
+    .stats-bar { display:inline-flex; gap:14px; background:#fff; padding:8px 14px; border-radius:9999px; box-shadow:0 6px 18px rgba(2,6,23,0.06); font-size:15px; color:#111; align-items:center; }
+    .stats-bar i { color:#00BFA6; margin-right:6px; }
+    .follow-btn { background:#00BFA6; color:#fff; padding:8px 18px; border-radius:9999px; font-weight:600; }
+    .follow-btn.following { background:#e6eef0; color:#1f2937; }
+    .back-btn-static { display:inline-flex; align-items:center; gap:8px; background:#fff; color:#0f766e; padding:8px 12px; border-radius:9999px; box-shadow:0 6px 18px rgba(2,6,23,0.06); border: none; cursor:pointer; font-weight:600; }
+    .back-btn-static:hover { transform:translateY(-2px); }
+    #toast { position:fixed; right:20px; bottom:20px; background:#00BFA6; color:#fff; padding:10px 14px; border-radius:8px; box-shadow:0 8px 30px rgba(2,6,23,0.12); opacity:0; transform:translateY(12px); transition:all .25s; z-index:60; }
+    #toast.show { opacity:1; transform:translateY(0); }
+    /* Category button styling for cleaner tabs */
+    .category-btn { background-color: transparent; color: #4b5563; padding: 8px 16px; border-radius: 9999px; font-weight: 500; border: 2px solid transparent; transition: all 0.2s; }
+    .category-btn:hover { background-color: #e6f7f5; color: #0f766e; }
+    .category-btn.active { background-color: #00BFA6; color: white; border-color: #00BFA6; font-weight: 600; }
+    .profile-tab-btn { flex: 1; padding: 12px; font-weight: 600; color: #4b5563; border-bottom: 2px solid transparent; }
+    .profile-tab-btn.active { color: #00BFA6; border-bottom-color: #00BFA6; }
+    
+    /* Styles for Glassmorphism Modal */
+    .modal-backdrop {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0, 0, 0, 0.4); 
+      backdrop-filter: blur(8px); 
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .glass-modal {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      max-width: 400px;
+      width: 90%;
+      padding: 30px;
+      text-align: center;
+      transform: scale(0.9);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+    .modal-backdrop.active .glass-modal {
+      transform: scale(1);
+      opacity: 1;
+    }
+    /* Style for Detailed Order Modal */
+    #order-detail-modal .glass-modal { max-width: 500px; padding: 20px; text-align: left; }
+    .modal-close-btn-x { position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 24px; color: #fff; cursor: pointer; }
+    
+  </style>
+</head>
+<body>
+  <header class="bg-white shadow-md sticky top-0 z-40 p-3">
+    <div class="max-w-7xl mx-auto flex justify-between items-center gap-4 px-4">
+      <img id="customer-logo" src="GoBazar_logo.png" alt="GoBazar Logo" class="h-10 cursor-pointer hidden sm:block" />
+       <div class="relative flex-grow max-w-xl mx-auto">
+        <input id="search-bar" type="text" placeholder="দোকান বা পণ্যের নাম দিয়ে খুঁজুন..." class="w-full py-2 px-4 pr-10 rounded-full text-gray-700 bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#00BFA6]">
+        <div class="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400"><i class="fas fa-search"></i></div>
+      </div>
+      <div class="flex items-center gap-4">
+        <button id="cart-btn" aria-label="Open cart" class="relative text-gray-600 hover:text-teal-600">
+          <i class="fas fa-shopping-cart text-xl"></i>
+          <span id="cart-count" class="absolute -top-2 -right-2 bg-teal-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
+        </button>
+        <button id="profile-btn" aria-label="Profile" class="text-gray-600 hover:text-teal-600">
+          <i class="fas fa-user-circle text-2xl"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <section id="hero" class="hero text-center py-16 px-4">
+    <h1 class="text-4xl md:text-5xl font-bold">আপনার এলাকার বিশ্বস্ত বাজার</h1>
+    <p class="mt-3 text-lg text-white/90">আপনার প্রয়োজনীয় সবকিছু অর্ডার করুন এক নিমিষেই।</p>
+  </section>
+
+  <div class="max-w-7xl mx-auto p-6">
+    <main id="main-page"></main>
+
+    <section id="product-details-page" class="hidden"></section>
+    <section id="shop-products-page" class="hidden"></section>
+    <section id="cart-page" class="hidden"></section>
+    <section id="profile-page" class="hidden"></section>
+  </div>
+
+  <footer class="bg-white py-8 mt-12 border-t">
+    <div class="max-w-7xl mx-auto text-center text-gray-600">© ২০২৫ GoBazar. সর্বস্বত্ব সংরক্ষিত।</div>
+  </footer>
+  
+  <div id="checkout-modal" class="modal-backdrop hidden">
+    <div class="glass-modal">
+      <i class="fas fa-check-circle text-6xl text-[#00BFA6] mb-4"></i>
+      <h3 class="text-2xl font-bold text-white mb-2" id="modal-title">অর্ডার সফল</h3>
+      <p class="text-white/80 mb-4" id="modal-message">আপনার অর্ডারটি সফলভাবে প্রক্রিয়াকরণ করা হয়েছে।</p>
+      
+      <div class="bg-white/30 p-4 rounded-lg text-left mb-4">
+        <p class="font-semibold text-white/90">অর্ডার আইডি: <span id="modal-order-id" class="font-normal"></span></p>
+        <p class="font-semibold text-white/90">মোট মূল্য: <span id="modal-total" class="font-normal text-[#00BFA6]"></span></p>
+      </div>
+      
+      <button id="modal-close-btn" class="w-full bg-[#00BFA6] hover:bg-[#00a892] text-white py-2 rounded-lg font-semibold transition">হোমপেজে ফিরুন</button>
+    </div>
+  </div>
+
+  <div id="order-detail-modal" class="modal-backdrop hidden">
+        <div class="glass-modal relative">
+            <button class="modal-close-btn-x" id="order-detail-close-btn-x">&times;</button>
+            <h3 class="text-xl font-bold text-white mb-4 border-b border-white/30 pb-2">অর্ডারের বিস্তারিত</h3>
+            <div id="order-detail-content">
+                </div>
+             <button id="order-detail-close-btn" class="w-full bg-[#00BFA6] hover:bg-[#00a892] text-white py-2 rounded-lg font-semibold transition mt-4">বন্ধ করুন</button>
+        </div>
+    </div>
+
+
+  <div id="toast"><i class="fas fa-check-circle mr-2"></i> <span id="toast-msg"></span></div>
+
+  <script>
+    // --- Constants ---
+    const SHIPPING_COST = 40; // Fixed shipping cost per shop in BDT
+
+    // --- Data ---
+    const MOCK_DATA = {
+      shops: [
+        { id:'shop1', name:'ময়মনসিংহ সবজি ভান্ডার', address:'নতুন বাজার, ময়মনসিংহ', rating:4.8, imageUrl:'https://placehold.co/800x400/00BFA6/FFFFFF?text=সবজি+ভান্ডার', cover:'https://placehold.co/1200x400/008b73/FFFFFF?text=সবজি+বাজার+Cover' },
+        { id:'shop2', name:'ফ্রেশ ফিশ ডেলিভারি', address:'চরপাড়া, ময়মনসিংহ', rating:4.6, imageUrl:'https://placehold.co/800x400/009688/FFFFFF?text=ফ্রেশ+ফিশ', cover:'https://placehold.co/1200x400/004d40/FFFFFF?text=Fish+Delivery+Cover' },
+        { id:'shop3', name:'ভাই ভাই স্টোর', address:'গাঙ্গিনারপাড়, ময়মনসিংহ', rating:4.9, imageUrl:'https://placehold.co/800x400/00BFA6/FFFFFF?text=ভাই+ভাই+স্টোর', cover:'https://placehold.co/1200x400/005f50/FFFFFF?text=ভাই+ভাই+Cover' }
+      ],
+      products: [
+        { id:'p1', shopId:'shop1', name:'তাজা টমেটো', price:60, unit:'কেজি', category:'শাকসবজি', imageUrl:'https://placehold.co/400x300/00BFA6/FFFFFF?text=Tomato' },
+        { id:'p2', shopId:'shop1', name:'দেশি আলু', price:40, unit:'কেজি', category:'শাকসবজি', imageUrl:'https://placehold.co/400x300/00BFA6/FFFFFF?text=Potato' },
+        { id:'p3', shopId:'shop2', name:'নদীর রুই মাছ', price:350, unit:'কেজি', category:'মাছ', imageUrl:'https://placehold.co/400x300/009688/FFFFFF?text=Rohi+Fish' },
+        { id:'p4', shopId:'shop2', name:'ইলিশ মাছ (মাঝারি)', price:800, unit:'পিস', category:'মাছ', imageUrl:'https://placehold.co/400x300/009688/FFFFFF?text=Hilsa+Fish' },
+        { id:'p5', shopId:'shop3', name:'আড়ং দুধ', price:90, unit:'লিটার', category:'পানীয়', imageUrl:'https://placehold.co/400x300/005f50/FFFFFF?text=Aarong+Milk' },
+        { id:'p6', shopId:'shop3', name:'চিঁড়া (প্যাকেট)', price:55, unit:'৫০০ গ্রাম', category:'অন্যান্য', imageUrl:'https://placehold.co/400x300/005f50/FFFFFF?text=Chira' }
+      ]
+    };
+
+    // --- State ---
+    let cart = [];
+    let followedShops = [];
+    // Load favorites from Local Storage or use an empty array
+    let favoriteProducts = JSON.parse(localStorage.getItem('goBazarFavorites')) || []; 
+    // New Order History structure: Total now includes shipping.
+    let orderHistory = [
+      { id: 'ord_12345_0', date: 'অক্টোবর ১২, ২০২৫', productTotal: 430, shipping: 40, total: 470, status: 'ডেলিভারি হয়েছে', shopId: 'shop2', items: [{ name: 'নদীর রুই মাছ', quantity: 1, price: 350 }, { name: 'দেশি আলু', quantity: 2, price: 40 }] }
+    ];
+
+    // --- Helpers ---
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+    const findProduct = (id) => MOCK_DATA.products.find(p => p.id === id); 
+    const findShop = (id) => MOCK_DATA.shops.find(s => s.id === id);
+
+    function saveFavorites() {
+        localStorage.setItem('goBazarFavorites', JSON.stringify(favoriteProducts));
+    }
+
+    function showToast(text) {
+      const t = $('#toast');
+      $('#toast-msg').textContent = text;
+      t.classList.add('show');
+      setTimeout(()=> t.classList.remove('show'), 2500);
+    }
+
+    function updateCartCount() {
+      const count = cart.reduce((s,i)=> s + i.quantity, 0);
+      $('#cart-count').textContent = count;
+    }
+
+    // *** MODIFIED showPage function to support conditional scrolling ***
+    function showPage(id, shouldScroll = true) { 
+      ['main-page','shop-products-page','cart-page','profile-page', 'product-details-page'].forEach(p => {
+        const el = document.getElementById(p);
+        if(!el) return;
+        el.classList.toggle('hidden', p !== id);
+      });
+      $('#hero').classList.toggle('hidden', id !== 'main-page');
+      if (shouldScroll) {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+    // *** END OF MODIFICATION ***
+
+    // --- Toggle Favorite (Wishlist) ---
+    function toggleFavorite(productId, btnEl) {
+        const product = findProduct(productId);
+        if (!product) return;
+
+        if (favoriteProducts.includes(productId)) {
+            favoriteProducts = favoriteProducts.filter(id => id !== productId);
+            if (btnEl) btnEl.classList.remove('text-red-500'); 
+            showToast(`${product.name} পছন্দ তালিকা থেকে সরানো হয়েছে।`);
+        } else {
+            favoriteProducts.push(productId);
+            if (btnEl) btnEl.classList.add('text-red-500'); 
+            showToast(`${product.name} পছন্দের তালিকায় যোগ করা হয়েছে।`);
+        }
+        
+        saveFavorites();
+        
+        // Re-render relevant sections to update heart icon state globally
+        if (!document.getElementById('main-page').classList.contains('hidden')) {
+            renderProductGrid($('#search-bar').value, document.querySelector('#product-category-filters .active')?.dataset.cat || 'all');
+        }
+        if (!document.getElementById('product-details-page').classList.contains('hidden')) {
+             renderProductDetails(productId); // Re-render details page
+        }
+        const currentActiveTab = document.querySelector('.profile-tab-btn.active')?.dataset.tab;
+        if (!document.getElementById('profile-page').classList.contains('hidden') && currentActiveTab === 'favorites') {
+            renderFavoriteProducts();
+        }
+    }
+
+    // --- Renders the product grid with filtering (Main Page) ---
+    function renderProductGrid(filter = '', activeCategory = 'all') {
+        const allProducts = MOCK_DATA.products;
+        let filteredProducts = allProducts;
+        
+        // 1. Filter by Category
+        if (activeCategory !== 'all') {
+            filteredProducts = filteredProducts.filter(p => p.category === activeCategory);
+        }
+
+        // 2. Filter by Search Query (Product Name)
+        if (filter) {
+            filteredProducts = filteredProducts.filter(p => 
+                p.name.toLowerCase().includes(filter.toLowerCase())
+            );
+        }
+        
+        const container = $('#products-container');
+        
+        if (filteredProducts.length === 0) {
+            container.innerHTML = `<p class="text-center col-span-full text-gray-500 py-8">এই ক্যাটাগরিতে কোনো পণ্য খুঁজে পাওয়া যায়নি।</p>`;
+            return;
+        }
+
+        container.innerHTML = filteredProducts.map(p => {
+            const isFavorite = favoriteProducts.includes(p.id);
+            const shop = findShop(p.shopId);
+            return `
+                <div class="bg-white rounded-xl shadow flex flex-col justify-between relative border card-hover">
+                    <button class="favorite-btn absolute top-3 right-3 text-xl z-20 p-2" data-id="${p.id}" title="পছন্দের তালিকা">
+                        <i class="fas fa-heart ${isFavorite ? 'text-red-500' : 'text-gray-300 hover:text-red-500'}"></i>
+                    </button>
+                    <div class="product-card-clickable cursor-pointer p-3" data-id="${p.id}">
+                        <img src="${p.imageUrl}" alt="${p.name}" class="w-full h-32 object-cover rounded-lg mb-2" loading="lazy">
+                        
+                        <h4 class="font-semibold text-gray-800">${p.name}</h4>
+                        <p class="text-xs text-[#00BFA6] font-medium mt-1 mb-2">${shop.name}</p> 
+                        <div class="flex items-end">
+                           <p class="text-lg font-bold text-gray-700">৳${p.price}</p>
+                           <p class="text-sm text-gray-500 ml-1">/${p.unit}</p>
+                        </div>
+                    </div>
+                    <button class="add-to-cart mx-3 mb-3 bg-[#00BFA6] hover:bg-[#00a892] text-white py-2 rounded-lg text-sm transition" data-id="${p.id}">
+                        <i class="fas fa-plus mr-1"></i> কার্টে নিন
+                    </button>
+                </div>
+            `;
+        }).join('');
+        
+        // Re-attach listeners to the new product cards
+        $$('#products-container .add-to-cart').forEach(b => b.addEventListener('click', (e) => {
+             e.stopPropagation(); // Prevent the card click from firing
+             addToCart(b.dataset.id);
+        }));
+        $$('#products-container .favorite-btn').forEach(b => b.addEventListener('click', (e) => {
+             e.stopPropagation(); // Prevent the card click from firing
+             toggleFavorite(b.dataset.id, e.currentTarget.querySelector('i'));
+        }));
+        // New: Attach click listener for product details
+        $$('#products-container .product-card-clickable').forEach(el => {
+            el.addEventListener('click', () => renderProductDetails(el.dataset.id));
+        });
+    }
+
+    // --- Product Details Page ---
+    function renderProductDetails(productId) {
+        const product = findProduct(productId);
+        if (!product) { renderShops(); return; }
+        const shop = findShop(product.shopId);
+        const isFavorite = favoriteProducts.includes(productId);
+
+        const page = $('#product-details-page');
+        page.innerHTML = `
+            <div class="max-w-4xl mx-auto px-4">
+                <div class="mb-4">
+                    <button class="back-btn-static" onclick="renderShops()"><i class="fas fa-arrow-left"></i> হোমপেজে ফিরুন</button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-6 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <img src="${product.imageUrl}" alt="${product.name}" class="w-full h-auto object-cover rounded-xl shadow-md">
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <h1 class="text-3xl font-bold text-gray-800">${product.name}</h1>
+                            <button id="detail-favorite-btn" class="text-3xl p-1" data-id="${product.id}" title="পছন্দের তালিকা">
+                                <i class="fas fa-heart ${isFavorite ? 'text-red-500' : 'text-gray-300 hover:text-red-500'}"></i>
+                            </button>
+                        </div>
+                        
+                        <p class="text-xl font-bold text-[#00BFA6] my-4">৳${product.price} / ${product.unit}</p>
+
+                        <div class="mb-6 pb-4 border-b">
+                            <h3 class="text-lg font-semibold mb-2">দোকানের তথ্য</h3>
+                            <p class="text-gray-600"><i class="fas fa-store text-sm mr-2"></i> ${shop.name}</p>
+                            <p class="text-sm text-gray-500 mt-1"><i class="fas fa-map-marker-alt text-sm mr-2"></i> ${shop.address}</p>
+                            </div>
+                        
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold mb-2">পণ্যের বিবরণ</h3>
+                            <p class="text-gray-700">এটি ময়মনসিংহ এলাকার একটি জনপ্রিয় দোকান থেকে পাওয়া সেরা মানের ${product.category} পণ্য। স্বাস্থ্যকর ও তাজা পণ্যের জন্য আস্থা রাখুন GoBazar-এ।</p>
+                        </div>
+
+                        <button id="detail-add-to-cart-btn" class="w-full bg-[#00BFA6] hover:bg-[#00a892] text-white py-3 rounded-lg font-semibold text-lg transition" data-id="${product.id}">
+                            <i class="fas fa-cart-plus mr-2"></i> কার্টে যোগ করুন
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        showPage('product-details-page');
+        
+        // Attach event listeners
+        $('#detail-add-to-cart-btn').addEventListener('click', () => addToCart(productId));
+        $('#detail-favorite-btn').addEventListener('click', (e) => toggleFavorite(productId, e.currentTarget.querySelector('i')));
+    }
+
+
+    // --- Render shops list and main page structure ---
+    function renderShops(filter = '') {
+      showPage('main-page');
+      const page = $('#main-page');
+      
+      // Filter shops based on search input
+      const filteredShops = MOCK_DATA.shops.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()));
+      
+      // Get all unique product categories
+      const allProducts = MOCK_DATA.products;
+      const categories = ['সকল পণ্য', ...new Set(allProducts.map(p => p.category))];
+      const initialCategory = 'সকল পণ্য';
+
+      // --- Build the main page structure (Products + Shops) ---
+      
+      // 1. Category Filter Tabs HTML
+      const categoryFiltersHtml = categories.map(cat => 
+        `<button class="category-btn ${cat === initialCategory ? 'active' : ''}" data-cat="${cat === 'সকল পণ্য' ? 'all' : cat}">${cat}</button>`
+      ).join('');
+      
+      // 2. Shop List HTML
+      const shopList = filteredShops.length === 0 && !filter ? 
+          `<p class="text-center col-span-full text-gray-500">কোনো দোকান খুঁজে পাওয়া যায়নি।</p>` :
+          `<div id="shops-container-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              ${filteredShops.map(s => `
+                  <div class="bg-white rounded-xl shadow card-hover overflow-hidden cursor-pointer" data-shop-id="${s.id}">
+                    <img src="${s.imageUrl}" alt="${s.name}" class="w-full h-48 object-cover" loading="lazy">
+                    <div class="p-4">
+                      <h3 class="text-lg font-semibold text-gray-800">${s.name}</h3>
+                      <p class="text-sm text-gray-600"><i class="fas fa-map-marker-alt text-[#00BFA6] mr-1"></i>${s.address}</p>
+                      <div class="text-yellow-400 mt-2"><i class="fas fa-star"></i> ${s.rating}</div>
+                    </div>
+                  </div>
+              `).join('')}
+          </div>`;
+
+      // 3. Combine and update main-page innerHTML
+      page.innerHTML = `
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-800 text-center mb-6">জনপ্রিয় পণ্যসমূহ</h2>
+          
+          <div id="product-category-filters" class="flex flex-wrap justify-center gap-3 mb-8 bg-white p-4 rounded-xl shadow-sm">
+              ${categoryFiltersHtml}
+          </div>
+
+          <div id="products-container" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 mb-12">
+              </div>
+
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-800 text-center mb-6 mt-12">জনপ্রিয় দোকানসমূহ</h2>
+          ${shopList}
+      `;
+
+      // --- Attach Event Listeners ---
+      
+      // Initial render of the product grid (shows 'all' products)
+      renderProductGrid(filter, 'all');
+
+      // For Shop Cards
+      $$('[data-shop-id]').forEach(card => {
+          card.addEventListener('click', () => renderShopProducts(card.dataset.shopId));
+      });
+      
+      // For Category Filter Buttons
+      $$('#product-category-filters .category-btn').forEach(b => b.addEventListener('click', (e) => {
+          // Update active state
+          $$('#product-category-filters .category-btn').forEach(btn => btn.classList.remove('active'));
+          e.target.classList.add('active');
+          
+          // Re-render the products grid based on the selected category
+          renderProductGrid($('#search-bar').value, e.target.dataset.cat);
+      }));
+
+      updateCartCount();
+    }
+    
+    // *** MODIFIED renderShopProducts function signature and scroll logic ***
+    function renderShopProducts(shopId, activeCategory = 'all', isFiltering = false) { 
+      const shop = MOCK_DATA.shops.find(s => s.id === shopId);
+      let products = MOCK_DATA.products.filter(p => p.shopId === shopId);
+      const categories = ['all', ...new Set(products.map(p => p.category))];
+      
+      // 1. Filter by Category
+      let filteredProducts = activeCategory === 'all' ? products : products.filter(p => p.category === activeCategory);
+      
+      // Removed: Filtering by search query inside shop page
+      
+      const isFollowed = followedShops.includes(shopId);
+
+      const page = $('#shop-products-page');
+      page.innerHTML = `
+        <div class="max-w-7xl mx-auto px-4">
+          <div class="mb-6">
+            <button class="back-btn-static" onclick="renderShops()"><i class="fas fa-arrow-left"></i> দোকান তালিকায় ফিরুন</button>
+          </div>
+          
+          <div class="shop-cover mb-6 rounded-xl overflow-hidden"><img src="${shop.cover}" alt="${shop.name} cover" loading="lazy"></div>
+          
+          <div class="bg-white p-6 rounded-xl shadow-lg mb-8 shop-info"> 
+            <div class="flex items-start justify-between flex-wrap"> 
+                
+                <div class="flex items-start gap-4 flex-grow min-w-0">
+                    <img src="${shop.imageUrl}" alt="${shop.name}" class="shop-profile flex-shrink-0" loading="lazy">
+                    
+                    <div>
+                        <div>
+                            <h2 class="text-2xl md:text-3xl font-bold">${shop.name}</h2>
+                            <p class="text-sm text-gray-600 mt-1"><i class="fas fa-map-marker-alt text-[#00BFA6] mr-1"></i>${shop.address}</p>
+                        </div>
+                        
+                        <div class="stats-bar mt-4"> 
+                            <span><i class="fas fa-box"></i> পণ্য: ${products.length}</span>
+                            <span><i class="fas fa-star"></i> রেটিং: ${shop.rating}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex-shrink-0 mt-4 md:mt-0"> 
+                    <button id="follow-btn" class="follow-btn ${isFollowed ? 'following' : ''}">${isFollowed ? '✔ Following' : '♡ Follow Shop'}</button>
+                </div>
+            </div>
+          </div>
+          <div id="shop-category-filters" class="flex flex-wrap justify-center gap-3 my-8">
+            ${categories.map(cat => `<button class="category-btn ${activeCategory === cat ? 'active' : ''}" data-cat="${cat}">${cat === 'all' ? 'সকল পণ্য' : cat}</button>`).join('')}
+          </div>
+          
+          <div id="shop-products-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 mt-8">
+            ${filteredProducts.length > 0 ? filteredProducts.map(p => {
+              const isFavorite = favoriteProducts.includes(p.id);
+              return `
+              <div class="bg-white rounded-xl shadow flex flex-col justify-between relative border">
+                <button class="favorite-btn absolute top-3 right-3 text-xl z-20 p-2" data-id="${p.id}" title="পছন্দের তালিকা">
+                    <i class="fas fa-heart ${isFavorite ? 'text-red-500' : 'text-gray-300 hover:text-red-500'}"></i>
+                </button>
+                 <div class="product-card-clickable cursor-pointer p-3" data-id="${p.id}">
+                    <img src="${p.imageUrl}" alt="${p.name}" class="w-full h-32 object-cover rounded-lg mb-2" loading="lazy">
+                    <h4 class="font-semibold">${p.name}</h4>
+                    <p class="text-gray-600 mt-2">৳${p.price} / ${p.unit}</p>
+                </div>
+                <button class="add-to-cart mx-3 mb-3 bg-[#00BFA6] text-white py-2 rounded-lg text-sm" data-id="${p.id}"><i class="fas fa-cart-plus mr-2"></i>কার্টে নিন</button>
+              </div>`
+            }).join('') : 
+            `<p class="text-center col-span-full text-gray-500 py-8">এই ক্যাটাগরিতে কোনো পণ্য খুঁজে পাওয়া যায়নি।</p>`}
+          </div>
+        </div>`;
+      showPage('shop-products-page', !isFiltering); // <--- MODIFIED: Only scroll if not filtering
+      
+      const currentShopId = shopId;
+      
+      // Removed: Attach Search Listener
+      
+      // Attach category listeners 
+      $$('#shop-category-filters .category-btn').forEach(b => b.addEventListener('click', () => {
+          // Changed call: removed filter argument
+          renderShopProducts(currentShopId, b.dataset.cat, true); // <--- MODIFIED: Pass true for filtering
+      }));
+
+      // Attach product action listeners
+      $$('#shop-products-page .add-to-cart').forEach(b => b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            addToCart(b.dataset.id);
+      }));
+      $$('#shop-products-page .favorite-btn').forEach(b => b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleFavorite(b.dataset.id, e.currentTarget.querySelector('i'));
+      }));
+      $$('#shop-products-page .product-card-clickable').forEach(el => {
+            el.addEventListener('click', () => renderProductDetails(el.dataset.id));
+      });
+
+      $('#follow-btn').addEventListener('click', () => toggleFollow(shopId, $('#follow-btn')));
+    }
+    // *** END OF MODIFICATION ***
+
+    // --- Follow / Unfollow ---
+    function toggleFollow(shopId, btnEl) {
+      const shop = MOCK_DATA.shops.find(s => s.id === shopId);
+      if (!shop) return;
+      if(followedShops.includes(shopId)) {
+        followedShops = followedShops.filter(id => id !== shopId);
+        if (btnEl) {
+          btnEl.classList.remove('following'); 
+          btnEl.textContent = '♡ Follow Shop';
+        }
+        showToast(`${shop.name} আনফলো করা হয়েছে।`);
+      } else {
+        followedShops.push(shopId);
+        if (btnEl) {
+          btnEl.classList.add('following'); 
+          btnEl.textContent = '✔ Following';
+        }
+        showToast(`${shop.name} ফলো করা হয়েছে।`);
+      }
+      // Re-render profile if needed
+      const currentActiveTab = document.querySelector('.profile-tab-btn.active')?.dataset.tab;
+      if (!document.getElementById('profile-page').classList.contains('hidden') && currentActiveTab === 'followed') {
+          renderFollowedShops();
+      }
+    }
+
+    // --- Profile page ---
+    function renderProfile() {
+      showPage('profile-page');
+      const page = $('#profile-page');
+      page.innerHTML = `
+        <div class="max-w-4xl mx-auto px-4">
+           <div class="mb-4">
+            <button class="back-btn-static" onclick="renderShops()"><i class="fas fa-arrow-left"></i> হোমপেজে ফিরুন</button>
+          </div>
+          <div class="bg-white rounded-xl shadow-lg py-6">
+            <h2 class="text-3xl font-bold mb-6 text-center">আমার প্রোফাইল</h2>
+            <div class="flex border-b mb-6">
+              <button class="profile-tab-btn active" data-tab="followed">ফলো করা দোকান</button>
+              <button class="profile-tab-btn" data-tab="favorites">পছন্দের পণ্য</button>
+              <button class="profile-tab-btn" data-tab="history">অর্ডার হিস্ট্রি</button>
+            </div>
+            <div id="profile-content" class="px-6"></div>
+          </div>
+        </div>`;
+      $$('.profile-tab-btn').forEach(btn => btn.addEventListener('click', (e) => {
+        $$('.profile-tab-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        const tab = e.target.dataset.tab;
+        if (tab === 'followed') renderFollowedShops();
+        else if (tab === 'favorites') renderFavoriteProducts(); 
+        else renderOrderHistory();
+      }));
+      renderFollowedShops(); // Default tab
+    }
+    
+    function renderFollowedShops() {
+      const container = $('#profile-content');
+      if (followedShops.length === 0) {
+        container.innerHTML = `<p class="text-gray-600 text-center py-8">আপনি এখনো কোনো দোকান ফলো করেননি।</p>`;
+        return;
+      }
+      const followed = MOCK_DATA.shops.filter(s => followedShops.includes(s.id));
+      container.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">${followed.map(s => `
+        <div class="bg-white rounded-xl shadow p-4 flex flex-col justify-between border">
+            <div>
+              <img src="${s.imageUrl}" alt="${s.name}" class="w-full h-36 object-cover rounded-lg mb-3" loading="lazy">
+              <h3 class="font-semibold">${s.name}</h3>
+              <p class="text-sm text-gray-600"><i class="fas fa-map-marker-alt text-[#00BFA6] mr-1"></i>${s.address}</p>
+              <div class="text-yellow-400 mt-2"><i class="fas fa-star"></i> ${s.rating}</div>
+            </div>
+            <div class="mt-4 flex gap-3">
+              <button class="view-shop-btn bg-[#00BFA6] flex-1 text-white py-2 px-3 rounded-lg" data-id="${s.id}">দোকান দেখুন</button>
+              <button class="unfollow-btn bg-red-100 text-red-600 py-2 px-3 rounded-lg" data-id="${s.id}">আনফলো</button>
+            </div>
+          </div>
+      `).join('')}</div>`;
+       // attach handlers
+      $$('.view-shop-btn').forEach(b => b.addEventListener('click', ()=> renderShopProducts(b.dataset.id)));
+      $$('.unfollow-btn').forEach(b => b.addEventListener('click', ()=> {
+        toggleFollow(b.dataset.id);
+        renderFollowedShops(); // Re-render this tab
+      }));
+    }
+
+    // Render Favorite Products
+    function renderFavoriteProducts() {
+        const container = $('#profile-content');
+        const favorites = MOCK_DATA.products.filter(p => favoriteProducts.includes(p.id));
+
+        if (favorites.length === 0) {
+            container.innerHTML = `<p class="text-gray-600 text-center py-8">আপনার পছন্দের তালিকায় কোনো পণ্য নেই।</p>`;
+            return;
+        }
+
+        container.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">${favorites.map(p => {
+            const shop = MOCK_DATA.shops.find(s => s.id === p.shopId);
+            return `
+                <div class="bg-white rounded-xl shadow p-4 border flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                         <img src="${p.imageUrl}" alt="${p.name}" class="w-16 h-16 object-cover rounded-lg" loading="lazy">
+                         <div>
+                            <h3 class="font-semibold">${p.name}</h3>
+                            <p class="text-sm text-gray-600">৳${p.price} / ${p.unit}</p>
+                            <p class="text-xs text-[#00BFA6] mt-1">দোকান: ${shop.name}</p>
+                         </div>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <button class="add-to-cart-fav bg-[#00BFA6] text-white py-1 px-3 rounded-lg text-sm" data-id="${p.id}"><i class="fas fa-cart-plus"></i></button>
+                        <button class="unfavorite-btn bg-red-100 text-red-600 py-1 px-3 rounded-lg text-sm" data-id="${p.id}"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </div>`;
+        }).join('')}</div>`;
+
+        // Attach handlers
+        $$('.add-to-cart-fav').forEach(b => b.addEventListener('click', () => {
+            addToCart(b.dataset.id);
+            // Product remains in the wishlist as per user request
+            renderFavoriteProducts();
+        }));
+        $$('.unfavorite-btn').forEach(b => b.addEventListener('click', () => {
+            toggleFavorite(b.dataset.id);
+            renderFavoriteProducts(); // Re-render this tab
+        }));
+    }
+
+    function renderOrderHistory() {
+        const container = $('#profile-content');
+        if (orderHistory.length === 0) {
+            container.innerHTML = `<p class="text-gray-600 text-center py-8">আপনার কোনো অর্ডার নেই।</p>`;
+            return;
+        }
+        container.innerHTML = `<div class="space-y-4">${orderHistory.map((order, index) => {
+            const shop = MOCK_DATA.shops.find(s => s.id === order.shopId);
+            const shopName = shop ? shop.name : 'একাধিক দোকান'; 
+            return `
+                <div class="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition view-order-btn" data-index="${index}">
+                    <div class="flex justify-between items-center border-b pb-2 mb-2">
+                        <div>
+                            <p class="font-semibold">অর্ডার #${order.id.split('_')[0] + order.id.split('_')[1] + (order.id.split('_').length > 2 ? '...' : '')}</p>
+                            <p class="text-sm text-gray-500">${order.date} - ${shopName}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-lg text-[#00BFA6]">৳${order.total}</p>
+                            <span class="text-xs font-semibold px-2 py-1 rounded-full ${order.status === 'ডেলিভারি হয়েছে' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${order.status}</span>
+                        </div>
+                    </div>
+                    <div>${order.items.map(item => `<p class="text-sm text-gray-700">${item.name} x ${item.quantity}</p>`).slice(0, 2).join('')}${order.items.length > 2 ? `<p class="text-sm text-gray-500 mt-1">...আরো পণ্য দেখুন</p>` : ''}</div>
+                </div>`;
+        }).join('')}</div>`;
+
+        // Attach event listeners for the new detail view
+        $$('.view-order-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const orderIndex = parseInt(e.currentTarget.dataset.index);
+                renderOrderDetailModal(orderHistory[orderIndex]);
+            });
+        });
+    }
+
+    // --- Order Detail Modal ---
+    function renderOrderDetailModal(order) {
+        const modal = $('#order-detail-modal');
+        const content = $('#order-detail-content');
+        const shop = findShop(order.shopId);
+        const statusClass = order.status === 'ডেলিভারি হয়েছে' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+
+        content.innerHTML = `
+            <div class="text-white/90">
+                <p class="mb-2"><span class="font-semibold">স্ট্যাটাস:</span> <span class="text-sm font-semibold px-2 py-1 rounded-full ${statusClass}">${order.status}</span></p>
+                <p class="mb-2"><span class="font-semibold">অর্ডার আইডি:</span> ${order.id}</p>
+                <p class="mb-4"><span class="font-semibold">দোকান:</span> ${shop.name}</p>
+                
+                <h4 class="font-semibold text-lg border-b border-white/30 pb-1 mb-2">পণ্যের তালিকা:</h4>
+                <div class="space-y-2 mb-4 text-sm">
+                    ${order.items.map(item => `
+                        <div class="flex justify-between">
+                            <span>${item.name} x ${item.quantity}</span>
+                            <span class="font-semibold">৳${item.price * item.quantity}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="border-t border-white/30 pt-3 space-y-1">
+                    <div class="flex justify-between">
+                        <span>পণ্যের মোট মূল্য:</span>
+                        <span class="font-semibold">৳${order.productTotal}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>শিপিং চার্জ:</span>
+                        <span class="font-semibold">৳${order.shipping}</span>
+                    </div>
+                    <div class="flex justify-between text-xl font-bold pt-2 text-[#00BFA6]">
+                        <span>মোট মূল্য:</span>
+                        <span>৳${order.total}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.add('active'), 10);
+    }
+
+    // Function to hide the order detail modal
+    function hideOrderDetailModal() {
+        const modal = $('#order-detail-modal');
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
+    }
+
+    // --- Cart functions ---
+    
+    // Allows products from different shops
+    function addToCart(productId) {
+      const product = findProduct(productId);
+      if(!product) return showToast('পণ্য পাওয়া যায়নি।');
+      
+      const existing = cart.find(i => i.id === productId);
+      if(existing) existing.quantity += 1;
+      else cart.push({ ...product, quantity: 1, shopId: product.shopId }); 
+      
+      updateCartCount();
+      showToast(`${product.name} কার্টে যোগ করা হয়েছে।`);
+    }
+
+    function updateCartItemQuantity(productId, action) {
+        const itemIndex = cart.findIndex(i => i.id === productId);
+        if (itemIndex === -1) return;
+        if (action === 'increase') cart[itemIndex].quantity++;
+        else if (action === 'decrease') {
+            cart[itemIndex].quantity--;
+            if (cart[itemIndex].quantity === 0) cart.splice(itemIndex, 1);
+        }
+        updateCartCount();
+        renderCart();
+    }
+
+    function removeCartItem(productId) {
+        cart = cart.filter(i => i.id !== productId);
+        updateCartCount();
+        renderCart();
+        showToast('পণ্যটি কার্ট থেকে মুছে ফেলা হয়েছে।');
+    }
+
+    // Calculates and displays shipping cost per shop
+    function renderCart() {
+      showPage('cart-page');
+      const page = $('#cart-page');
+      
+      if(cart.length === 0) {
+        page.innerHTML = `<div class="max-w-4xl mx-auto px-4"><div class="mb-4"><button class="back-btn-static" onclick="renderShops()"><i class="fas fa-arrow-left"></i> কেনাকাটা চালিয়ে যান</button></div><h2 class="text-3xl font-bold mb-4">আপনার কার্ট</h2><div class="bg-white p-8 rounded-xl text-gray-600 text-center">আপনার কার্ট খালি।</div></div>`;
+        return;
+      }
+      
+      // Group cart items by shopId
+      const groupedCart = cart.reduce((groups, item) => {
+          (groups[item.shopId] = groups[item.shopId] || []).push(item);
+          return groups;
+      }, {});
+      
+      let totalProductCost = 0;
+      const totalShippingCost = Object.keys(groupedCart).length * SHIPPING_COST;
+
+      const cartItemsHtml = Object.keys(groupedCart).map(shopId => {
+          const shop = findShop(shopId);
+          const shopItems = groupedCart[shopId];
+          const shopProductTotal = shopItems.reduce((s, i) => s + i.price * i.quantity, 0);
+          totalProductCost += shopProductTotal; // Accumulate for grand total
+          const shopTotalWithShipping = shopProductTotal + SHIPPING_COST;
+          
+          const itemsList = shopItems.map(i => `
+              <div class="flex items-center justify-between py-2 border-b last:border-b-0">
+                <div><p class="font-semibold">${i.name}</p><p class="text-sm text-gray-500">৳${i.price}</p></div>
+                <div class="flex items-center gap-2 md:gap-4">
+                  <button class="cart-quantity-btn h-8 w-8 bg-gray-200 rounded-full" data-id="${i.id}" data-action="decrease">-</button>
+                  <span class="font-bold">${i.quantity}</span>
+                  <button class="cart-quantity-btn h-8 w-8 bg-gray-200 rounded-full" data-id="${i.id}" data-action="increase">+</button>
+                  <button class="cart-remove-btn text-red-500 ml-4" data-id="${i.id}"><i class="fas fa-trash-alt"></i></button>
+                </div>
+              </div>
+          `).join('');
+
+          return `
+              <div class="border rounded-xl p-4 shadow-sm mb-4 bg-gray-50">
+                  <h3 class="font-bold text-lg text-gray-800 border-b pb-2 mb-2">${shop.name} <span class="text-sm font-normal text-gray-500">(৳${SHIPPING_COST} শিপিং)</span></h3>
+                  ${itemsList}
+                  <div class="flex justify-between font-semibold text-md pt-3">
+                      <div>মোট (শিপিং সহ)</div>
+                      <div class="text-[#00BFA6] font-bold">৳${shopTotalWithShipping}</div>
+                  </div>
+              </div>
+          `;
+      }).join('');
+      
+      const grandTotal = totalProductCost + totalShippingCost;
+      const totalShops = Object.keys(groupedCart).length;
+
+      page.innerHTML = `
+        <div class="max-w-4xl mx-auto px-4">
+           <div class="mb-4">
+            <button class="back-btn-static" onclick="renderShops()"><i class="fas fa-arrow-left"></i> কেনাকাটা চালিয়ে যান</button>
+          </div>
+          <h2 class="text-3xl font-bold mb-6">আপনার কার্ট (${totalShops} দোকান থেকে)</h2>
+          <div class="space-y-4">
+            ${cartItemsHtml}
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow mt-6">
+            <div class="space-y-2 border-b pb-3 mb-3 text-gray-700">
+                <div class="flex justify-between"><span>পণ্যের মোট মূল্য</span> <span>৳${totalProductCost}</span></div>
+                <div class="flex justify-between"><span>মোট শিপিং চার্জ (${totalShops}টি দোকান)</span> <span class="text-red-500 font-semibold">৳${totalShippingCost}</span></div>
+            </div>
+            <div class="flex justify-between font-semibold text-xl"> <div>গ্র্যান্ড মোট</div> <div class="text-[#00BFA6]">৳${grandTotal}</div> </div>
+            <div class="mt-4"><button id="place-order" class="w-full bg-[#00BFA6] text-white py-3 rounded-lg font-semibold text-lg">অর্ডার করুন (${totalShops}টি অর্ডার)</button></div>
+          </div>
+        </div>`;
+      
+      // Attach listeners to new elements
+      $('#place-order').addEventListener('click', placeOrder);
+      $$('.cart-quantity-btn').forEach(b => b.addEventListener('click', () => updateCartItemQuantity(b.dataset.id, b.dataset.action)));
+      $$('.cart-remove-btn').forEach(b => b.addEventListener('click', () => removeCartItem(b.dataset.id)));
+    }
+
+    // --- Modal Functions ---
+    function showCheckoutModal(orderId, total, orderCount) {
+        const modal = $('#checkout-modal');
+        $('#modal-title').textContent = orderCount > 1 ? 'অর্ডার সফল (একাধিক)' : 'অর্ডার সফল';
+        $('#modal-message').textContent = orderCount > 1 ? `আপনার ${orderCount}টি অর্ডার সফলভাবে প্রক্রিয়াকরণ করা হয়েছে।` : `আপনার অর্ডারটি সফলভাবে প্রক্রিয়াকরণ করা হয়েছে।`;
+        // Only show a snippet of the first order ID
+        $('#modal-order-id').textContent = orderId.split('_')[0] + orderId.split('_')[1] + (orderId.includes('...' ? '...' : '')); 
+        $('#modal-total').textContent = `৳${total}`;
+
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.add('active'), 10); 
+    }
+
+    function hideCheckoutModal() {
+        const modal = $('#checkout-modal');
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            renderShops(); // Redirect to homepage after modal closes
+        }, 300); 
+    }
+
+    // Calculates and records shipping cost per order
+    function placeOrder() {
+      if (cart.length === 0) return showToast('কার্ট খালি!');
+      
+      const groupedCart = cart.reduce((groups, item) => {
+          (groups[item.shopId] = groups[item.shopId] || []).push(item);
+          return groups;
+      }, {});
+
+      let firstOrderId = '';
+      let totalProductCost = 0;
+
+      // 1. Create a separate order for each shop group
+      Object.keys(groupedCart).forEach((shopId, index) => {
+          const shopItems = groupedCart[shopId];
+          const productTotal = shopItems.reduce((s, i) => s + i.price * i.quantity, 0);
+          const shipping = SHIPPING_COST; // Add fixed shipping cost
+          const shopTotal = productTotal + shipping;
+          totalProductCost += productTotal;
+          
+          const orderId = `ord_${Date.now()}_${index}`;
+          
+          if (index === 0) firstOrderId = orderId; // Keep the first ID for the modal
+
+          const newOrder = {
+              id: orderId,
+              date: new Date().toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }),
+              productTotal: productTotal, 
+              shipping: shipping, 
+              total: shopTotal, 
+              status: 'প্রসেসিং চলছে',
+              shopId: shopId, 
+              items: shopItems.map(i => ({ name: i.name, quantity: i.quantity, price: i.price }))
+          };
+          orderHistory.unshift(newOrder); // Add to beginning of history
+      });
+      
+      // 2. Clear cart and show confirmation
+      cart = [];
+      updateCartCount();
+      
+      const totalShippingCost = Object.keys(groupedCart).length * SHIPPING_COST;
+      const grandTotal = totalProductCost + totalShippingCost;
+      
+      showCheckoutModal(
+          firstOrderId + (Object.keys(groupedCart).length > 1 ? '...' : ''), 
+          grandTotal,
+          Object.keys(groupedCart).length
+      ); 
+    }
+
+    // --- Init UI bindings ---
+    document.addEventListener('DOMContentLoaded', ()=> {
+      renderShops();
+      $('#cart-btn').addEventListener('click', renderCart);
+      $('#profile-btn').addEventListener('click', renderProfile);
+      $('#customer-logo').addEventListener('click', () => renderShops());
+      
+      // Global Search Bar: Update to filter both shops and products grid
+      $('#search-bar').addEventListener('input', (e) => {
+          // Re-render shops list based on search filter
+          renderShops(e.target.value);
+          // Re-render product grid based on search filter and active category
+          const activeCategory = document.querySelector('#product-category-filters .active')?.dataset.cat || 'all';
+          renderProductGrid(e.target.value, activeCategory);
+      });
+      
+      // Checkout Modal close handlers
+      $('#modal-close-btn').addEventListener('click', hideCheckoutModal);
+      $('#checkout-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'checkout-modal') hideCheckoutModal();
+      });
+
+      // Order Detail Modal close handlers
+      $('#order-detail-close-btn').addEventListener('click', hideOrderDetailModal);
+      $('#order-detail-close-btn-x').addEventListener('click', hideOrderDetailModal);
+      $('#order-detail-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'order-detail-modal') hideOrderDetailModal();
+      });
+
+      updateCartCount();
+    });
+  </script>
+</body>
+</html>
